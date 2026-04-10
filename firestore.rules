@@ -55,23 +55,14 @@ service cloud.firestore {
     }
 
     match /tickets/{ticketId} {
-      // All authenticated teachers can read all tickets (collaborative library)
-      allow read: if isAuthenticated();
+      // Public access for collaborative use without login as requested
+      allow read: if true;
       
-      // Teachers can create tickets with their own UID
-      allow create: if isAuthenticated() && 
-                     isValidTicket(request.resource.data) && 
-                     request.resource.data.teacherId == request.auth.uid;
+      allow create: if isValidTicket(request.resource.data);
       
-      // Teachers can update their own tickets
-      allow update: if isAuthenticated() && 
-                     isValidTicket(request.resource.data) && 
-                     resource.data.teacherId == request.auth.uid &&
-                     request.resource.data.teacherId == request.auth.uid;
+      allow update: if isValidTicket(request.resource.data);
       
-      // Teachers can delete their own tickets
-      allow delete: if isAuthenticated() && 
-                     resource.data.teacherId == request.auth.uid;
+      allow delete: if true;
     }
 
     match /users/{userId} {

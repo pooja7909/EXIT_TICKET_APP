@@ -27,3 +27,21 @@ export interface Ticket {
   teacherEmail: string;
   questions?: Question[];
 }
+
+export interface StudentAnswer {
+  questionIndex: number;
+  questionText: string;
+  answer: string;
+  isCorrect?: boolean;
+}
+
+export interface TicketResponse {
+  id: string;
+  ticketId: string;
+  ticketName: string;
+  studentName: string;
+  yearGroup: string;
+  answers: StudentAnswer[];
+  submittedAt: string;
+  teacherId: string;
+}

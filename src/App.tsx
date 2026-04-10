@@ -184,7 +184,17 @@ function AppContent() {
   // Auth Listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
+      if (u) {
+        setUser(u);
+      } else {
+        // Set a default Guest user to bypass login as requested
+        setUser({
+          uid: 'public-teacher',
+          displayName: 'Guest Teacher',
+          email: 'guest@exitstudio.local',
+          photoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Guest'
+        } as any);
+      }
       setIsAuthReady(true);
     });
     return () => unsubscribe();
@@ -507,10 +517,6 @@ function AppContent() {
   };
 
   const toggleActive = async (ticket: Ticket) => {
-    if (!user || ticket.teacherId !== user.uid) {
-      showToast("You can only toggle status for your own tickets.", "error");
-      return;
-    }
     const newStatus = ticket.status === 'active' ? 'draft' : 'active';
     try {
       await updateDoc(doc(db, 'tickets', ticket.id), { status: newStatus });
@@ -615,21 +621,6 @@ function AppContent() {
 
   if (!isAuthReady) return <div className="flex items-center justify-center h-screen"><div className="spinner"></div></div>;
 
-  if (!user) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen bg-off">
-        <div className="card p-10 text-center max-w-md">
-          <div className="logo-box mx-auto mb-4 w-12 h-12 text-xl">E</div>
-          <h1 className="text-2xl font-bold font-serif mb-2">Exit Ticket Studio</h1>
-          <p className="text-t2 mb-6">Welcome, teacher! Please sign in to access the collaborative library and generate exit tickets.</p>
-          <button onClick={login} className="btn btn-navy w-full py-3 flex items-center justify-center gap-2">
-            <LogIn size={18} /> Sign in with Google
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="layout">
       <aside className="sidebar">
@@ -664,12 +655,9 @@ function AppContent() {
         </nav>
         <div className="sb-footer">
           <div className="flex items-center gap-2 mb-4">
-            <img src={user.photoURL || ''} className="w-6 h-6 rounded-full" alt="" />
-            <span className="text-white/60 truncate">{user.displayName}</span>
+            <div className="w-6 h-6 rounded-full bg-teal flex items-center justify-center text-[10px] text-white font-bold">GT</div>
+            <span className="text-white/60 truncate">Guest Teacher</span>
           </div>
-          <button onClick={logout} className="btn btn-outline btn-sm w-full mb-2 text-white/40 border-white/10 hover:bg-white/5">
-            <LogOut size={12} /> Sign out
-          </button>
           IBDP Computer Science<br />Exit Ticket Studio v2
         </div>
       </aside>
@@ -993,7 +981,7 @@ interface TicketItemProps {
 }
 
 function TicketItem({ ticket, user, onDelete, onToggleActive, onPreview, onDownload }: TicketItemProps) {
-  const isOwner = user?.uid === ticket.teacherId;
+  const isOwner = true; // Everyone can manage all tickets in this shared version
   const typeLabels: Record<string, string> = { quiz: 'Quiz', circle: 'Emoji', reflect: 'Reflection', mixed: 'Mixed', upload: 'Uploaded' };
   const typeCls: Record<string, string> = { quiz: 'bq', circle: 'bc', reflect: 'br', mixed: 'bq', upload: 'bu' };
 

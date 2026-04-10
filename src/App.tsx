@@ -24,7 +24,7 @@ import {
 } from 'firebase/auth';
 import { GoogleGenAI } from "@google/genai";
 import { db, auth, firebaseConfig } from './firebase';
-import { Ticket, TicketType, TicketStatus, Question } from './types';
+import { Ticket, TicketType, TicketStatus, Question, TicketResponse, StudentAnswer } from './types';
 import { 
   LayoutGrid, 
   Sparkles, 
@@ -43,7 +43,10 @@ import {
   QrCode,
   Folder,
   ChevronRight,
-  ArrowLeft
+  ArrowLeft,
+  BarChart3,
+  Users,
+  Clock
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -157,13 +160,22 @@ function AppContent() {
   });
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [studentName, setStudentName] = useState('');
+  const [studentYearGroup, setStudentYearGroup] = useState('');
   const [hasEnteredName, setHasEnteredName] = useState(false);
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [responses, setResponses] = useState<TicketResponse[]>([]);
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [libFilter, setLibFilter] = useState('all');
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' | '' } | null>(null);
   const [editingTicketId, setEditingTicketId] = useState<string | null>(null);
+  
+  // Student taking ticket state
+  const [activeTicketForStudent, setActiveTicketForStudent] = useState<Ticket | null>(null);
+  const [studentAnswers, setStudentAnswers] = useState<Record<number, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [selectedTicketIdForResults, setSelectedTicketIdForResults] = useState<string | null>(null);
   
   const navigate = (page: string) => {
     setCurrentPage(page);
@@ -250,7 +262,18 @@ function AppContent() {
       handleFirestoreError(error, OperationType.LIST, 'tickets');
     });
 
-    return () => unsubscribe();
+    const qResp = query(collection(db, 'responses'), orderBy('submittedAt', 'desc'));
+    const unsubscribeResp = onSnapshot(qResp, (snapshot) => {
+      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TicketResponse));
+      setResponses(docs);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'responses');
+    });
+
+    return () => {
+      unsubscribe();
+      unsubscribeResp();
+    };
   }, [isAuthReady]);
 
   // Connection Test
@@ -624,6 +647,48 @@ function AppContent() {
     setManualPreviewHTML('');
   };
 
+  const submitResponse = async () => {
+    if (!activeTicketForStudent || !studentName) return;
+    setIsSubmitting(true);
+
+    const answers: StudentAnswer[] = (activeTicketForStudent.questions || []).map((q, i) => {
+      const ans = studentAnswers[i] || '';
+      let isCorrect = undefined;
+      if (q.type === 'mcq' && q.correct !== undefined) {
+        // Find the index of the selected option
+        const selectedIndex = q.options?.indexOf(ans);
+        isCorrect = selectedIndex === q.correct;
+      }
+      return {
+        questionIndex: i,
+        questionText: q.text,
+        answer: ans,
+        isCorrect
+      };
+    });
+
+    const responseData: Omit<TicketResponse, 'id'> = {
+      ticketId: activeTicketForStudent.id,
+      ticketName: activeTicketForStudent.name,
+      studentName,
+      yearGroup: studentYearGroup || activeTicketForStudent.cls || 'General',
+      answers,
+      submittedAt: new Date().toISOString(),
+      teacherId: activeTicketForStudent.teacherId
+    };
+
+    try {
+      await addDoc(collection(db, 'responses'), responseData);
+      showToast("Ticket submitted successfully!", "success");
+      setActiveTicketForStudent(null);
+      setStudentAnswers({});
+    } catch (e) {
+      handleFirestoreError(e, OperationType.CREATE, 'responses');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const buildTicketPageHTML = (data: any) => {
     const qs = (data.questions || []).map((q: any, i: number) => {
       if (q.type === 'mcq') {
@@ -734,12 +799,22 @@ function AppContent() {
                 onChange={e => setStudentName(e.target.value)} 
                 placeholder="Enter your full name"
                 className="text-lg py-3"
-                onKeyDown={e => e.key === 'Enter' && studentName.trim() && setHasEnteredName(true)}
+              />
+            </div>
+            <div className="form-section">
+              <label className="form-label">Year Group / Class</label>
+              <input 
+                type="text" 
+                value={studentYearGroup} 
+                onChange={e => setStudentYearGroup(e.target.value)} 
+                placeholder="e.g. Year 5, 10B"
+                className="text-lg py-3"
+                onKeyDown={e => e.key === 'Enter' && studentName.trim() && studentYearGroup.trim() && setHasEnteredName(true)}
               />
             </div>
             <button 
               className="btn btn-teal w-full py-3 text-lg" 
-              disabled={!studentName.trim()}
+              disabled={!studentName.trim() || !studentYearGroup.trim()}
               onClick={() => setHasEnteredName(true)}
             >
               View My Tickets
@@ -762,30 +837,123 @@ function AppContent() {
           </div>
         </header>
         <main className="student-main">
-          <div className="sec-title mb-6 text-xl">Active Exit Tickets</div>
-          <div className="space-y-4">
-            {activeTickets.length === 0 ? (
-              <div className="empty">
-                <div className="empty-icon">📋</div>
-                <div className="empty-title">No active tickets</div>
-                <div className="empty-sub">Your teacher hasn't shared any tickets yet.</div>
-              </div>
-            ) : (
-              activeTickets.map(t => (
-                <div key={t.id} className="ticket-item">
-                  <div className="ticket-accent" style={{ background: t.color }}></div>
-                  <div className="ticket-info">
-                    <div className="ticket-name">{t.name}</div>
-                    <div className="ticket-meta">
-                      <span className={`tbadge ${typeCls[t.type] || 'bu'}`}>{typeLabels[t.type] || t.type}</span>
-                      <span>{t.subject} • {t.topic}</span>
-                    </div>
-                  </div>
-                  <button className="btn btn-teal btn-sm" onClick={() => previewTicket(t)}>Open Ticket</button>
+          {activeTicketForStudent ? (
+            <div className="max-w-2xl mx-auto">
+              <button className="btn btn-outline btn-sm mb-6" onClick={() => setActiveTicketForStudent(null)}>
+                <ArrowLeft size={14} /> Back to tickets
+              </button>
+              
+              <div className="card p-0 overflow-hidden shadow-lg border-none">
+                <div className="p-6 bg-navy text-white">
+                  <h2 className="text-2xl font-bold font-serif mb-1">{activeTicketForStudent.name}</h2>
+                  <p className="text-white/60 text-sm">{activeTicketForStudent.subject} • {activeTicketForStudent.topic}</p>
                 </div>
-              ))
-            )}
-          </div>
+                
+                <div className="p-8 space-y-8 bg-white">
+                  {(activeTicketForStudent.questions || []).map((q, i) => (
+                    <div key={i} className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-teal/10 text-teal flex items-center justify-center text-xs font-bold">{i + 1}</span>
+                        <h3 className="font-semibold text-t1">{q.text}</h3>
+                      </div>
+                      
+                      {q.type === 'mcq' && (
+                        <div className="grid grid-cols-1 gap-2">
+                          {(q.options || []).map((opt, oi) => (
+                            <button 
+                              key={oi} 
+                              className={`flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all ${studentAnswers[i] === opt ? 'border-teal bg-teal/5 text-teal font-medium' : 'border-b1 hover:border-b2 text-t2'}`}
+                              onClick={() => setStudentAnswers(prev => ({ ...prev, [i]: opt }))}
+                            >
+                              <span className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-[10px] font-bold ${studentAnswers[i] === opt ? 'border-teal bg-teal text-white' : 'border-b2'}`}>
+                                {String.fromCharCode(65 + oi)}
+                              </span>
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {q.type === 'circle' && (
+                        <div className="flex gap-4 justify-center py-4">
+                          {['😕', '🙂', '😊', '😄', '🤩'].map((emoji, ei) => (
+                            <button 
+                              key={ei} 
+                              className={`text-4xl p-2 rounded-full border-4 transition-all ${studentAnswers[i] === emoji ? 'border-teal scale-110 bg-teal/5' : 'border-transparent hover:scale-105'}`}
+                              onClick={() => setStudentAnswers(prev => ({ ...prev, [i]: emoji }))}
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {q.type === 'reflect' && (
+                        <textarea 
+                          className="w-full p-4 rounded-xl border-2 border-b1 focus:border-teal focus:ring-0 transition-all min-h-[120px]"
+                          placeholder="Type your reflection here..."
+                          value={studentAnswers[i] || ''}
+                          onChange={e => setStudentAnswers(prev => ({ ...prev, [i]: e.target.value }))}
+                        />
+                      )}
+                    </div>
+                  ))}
+                  
+                  <div className="pt-6 border-t border-b1 flex items-center justify-between">
+                    <span className="text-t3 text-sm italic">
+                      {Object.keys(studentAnswers).length} of {activeTicketForStudent.questions?.length || 0} answered
+                    </span>
+                    <button 
+                      className="btn btn-teal px-8 py-3 text-lg" 
+                      disabled={isSubmitting || Object.keys(studentAnswers).length < (activeTicketForStudent.questions?.length || 0)}
+                      onClick={submitResponse}
+                    >
+                      {isSubmitting ? 'Submitting...' : 'Submit Ticket'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="sec-title mb-6 text-xl">Active Exit Tickets</div>
+              <div className="space-y-4">
+                {activeTickets.length === 0 ? (
+                  <div className="empty">
+                    <div className="empty-icon">📋</div>
+                    <div className="empty-title">No active tickets</div>
+                    <div className="empty-sub">Your teacher hasn't shared any tickets yet.</div>
+                  </div>
+                ) : (
+                  activeTickets.map(t => (
+                    <div key={t.id} className="ticket-item">
+                      <div className="ticket-accent" style={{ background: t.color }}></div>
+                      <div className="ticket-info">
+                        <div className="ticket-name">{t.name}</div>
+                        <div className="ticket-meta">
+                          <span className={`tbadge ${typeCls[t.type] || 'bu'}`}>{typeLabels[t.type] || t.type}</span>
+                          <span>{t.subject} • {t.topic}</span>
+                        </div>
+                      </div>
+                      <button 
+                        className="btn btn-teal btn-sm" 
+                        onClick={() => {
+                          if (t.source === 'link' && t.url) {
+                            window.open(t.url, '_blank');
+                          } else {
+                            setActiveTicketForStudent(t);
+                            setStudentAnswers({});
+                          }
+                        }}
+                      >
+                        Open Ticket
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          )}
           <div className="mt-12 pt-8 border-t border-b1 text-center text-t3 text-xs">
             Powered by ExitStudio • Teacher Exit Ticket Builder
           </div>
@@ -824,6 +992,9 @@ function AppContent() {
           </button>
           <button className={`nav-btn ${currentPage === 'share' ? 'active' : ''}`} onClick={() => navigate('share')}>
             <Share2 className="ni" /> Share with students
+          </button>
+          <button className={`nav-btn ${currentPage === 'results' ? 'active' : ''}`} onClick={() => navigate('results')}>
+            <BarChart3 className="ni" /> Student Results <span className="nb hi">{responses.length}</span>
           </button>
         </nav>
         <div className="sb-footer">
@@ -1211,6 +1382,115 @@ function AppContent() {
                         <TicketItem key={t.id} ticket={t} user={user} onDelete={deleteTicket} onToggleActive={toggleActive} onPreview={previewTicket} onDownload={downloadTicket} onEdit={editTicket} />
                       ))
                     )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* RESULTS */}
+          {currentPage === 'results' && (
+            <div className="page active">
+              <div className="flex flex-col lg:flex-row gap-6">
+                <div className="w-full lg:w-1/3">
+                  <div className="card">
+                    <div className="sec-title mb-4">Select Ticket</div>
+                    <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2">
+                      <button 
+                        className={`w-full text-left p-3 rounded-xl border-2 transition-all flex items-center gap-3 ${selectedTicketIdForResults === null ? 'border-teal bg-teal/5 text-teal font-bold' : 'border-b1 hover:border-b2 text-t2'}`}
+                        onClick={() => setSelectedTicketIdForResults(null)}
+                      >
+                        <LayoutGrid size={16} /> All Results
+                      </button>
+                      {tickets.map(t => (
+                        <button 
+                          key={t.id}
+                          className={`w-full text-left p-3 rounded-xl border-2 transition-all flex items-center gap-3 ${selectedTicketIdForResults === t.id ? 'border-teal bg-teal/5 text-teal font-bold' : 'border-b1 hover:border-b2 text-t2'}`}
+                          onClick={() => setSelectedTicketIdForResults(t.id)}
+                        >
+                          <div className="w-2 h-2 rounded-full" style={{ background: t.color }}></div>
+                          <div className="truncate">
+                            <div className="text-sm truncate">{t.name}</div>
+                            <div className="text-[10px] opacity-60">{t.subject} • {responses.filter(r => r.ticketId === t.id).length} responses</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="w-full lg:w-2/3">
+                  <div className="card">
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <div className="sec-title">
+                          {selectedTicketIdForResults 
+                            ? `Results for ${tickets.find(t => t.id === selectedTicketIdForResults)?.name}` 
+                            : 'All Student Submissions'}
+                        </div>
+                        <p className="text-xs text-t3">
+                          {responses.filter(r => !selectedTicketIdForResults || r.ticketId === selectedTicketIdForResults).length} total responses found
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="flex items-center gap-1 px-3 py-1 bg-teal/10 text-teal rounded-full text-[10px] font-bold uppercase">
+                          <Users size={12} /> {new Set(responses.filter(r => !selectedTicketIdForResults || r.ticketId === selectedTicketIdForResults).map(r => r.studentName)).size} Students
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      {responses.filter(r => !selectedTicketIdForResults || r.ticketId === selectedTicketIdForResults).length === 0 ? (
+                        <div className="empty py-20">
+                          <div className="empty-icon">📊</div>
+                          <div className="empty-title">No results yet</div>
+                          <div className="empty-sub">Once students submit their tickets, you'll see them here.</div>
+                        </div>
+                      ) : (
+                        responses
+                          .filter(r => !selectedTicketIdForResults || r.ticketId === selectedTicketIdForResults)
+                          .map(r => (
+                            <div key={r.id} className="p-4 rounded-xl border border-b1 hover:border-b2 transition-all bg-off/30">
+                              <div className="flex items-start justify-between mb-3">
+                                <div>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="font-bold text-t1">{r.studentName}</span>
+                                    <span className="px-2 py-0.5 bg-navy/5 text-navy text-[10px] font-bold rounded uppercase tracking-wider">{r.yearGroup}</span>
+                                  </div>
+                                  <div className="text-[10px] text-t3 flex items-center gap-1">
+                                    <Clock size={10} /> {new Date(r.submittedAt).toLocaleString()}
+                                    {!selectedTicketIdForResults && <span> • {r.ticketName}</span>}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-xs font-bold text-teal">
+                                    {r.answers.filter(a => a.isCorrect === true).length} / {r.answers.filter(a => a.isCorrect !== undefined).length} Correct
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                                {r.answers.map((ans, ai) => (
+                                  <div key={ai} className="p-3 rounded-lg bg-white border border-b1 text-xs">
+                                    <div className="text-t3 mb-1 flex items-center gap-1">
+                                      <span className="w-4 h-4 rounded-full bg-off flex items-center justify-center text-[8px] font-bold">{ai + 1}</span>
+                                      <span className="truncate">{ans.questionText}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-medium text-t1">{ans.answer}</span>
+                                      {ans.isCorrect !== undefined && (
+                                        ans.isCorrect 
+                                          ? <CheckCircle size={14} className="text-teal" /> 
+                                          : <AlertCircle size={14} className="text-red-500" />
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

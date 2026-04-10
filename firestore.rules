@@ -10,6 +10,13 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    match /responses/{responseId} {
+      // Allow students to submit and teachers to view results
+      allow read, create: if true;
+      // Prevent editing or deleting responses publicly
+      allow update, delete: if false;
+    }
+
     match /test/{docId} {
       // Used for connection testing
       allow read: if true;

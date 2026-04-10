@@ -146,8 +146,15 @@ const ErrorBoundary: any = class extends Component<any, any> {
 }
 
 function AppContent() {
+  console.log("AppContent rendering...");
   const [user, setUser] = useState<User | null>(null);
-  const [isStudentView, setIsStudentView] = useState(false);
+  const [isStudentView, setIsStudentView] = useState(() => {
+    try {
+      return window.location.search.includes('view=student');
+    } catch (e) {
+      return false;
+    }
+  });
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [studentName, setStudentName] = useState('');
   const [hasEnteredName, setHasEnteredName] = useState(false);
@@ -685,6 +692,7 @@ function AppContent() {
   });
 
   if (!isAuthReady) {
+    console.log("App waiting for auth...");
     return (
       <div className="flex items-center justify-center h-screen bg-off">
         <div className="text-center">
@@ -695,7 +703,8 @@ function AppContent() {
     );
   }
 
-  if (isStudentView) {
+  try {
+    if (isStudentView) {
     const activeTickets = tickets.filter(t => t.status === 'active');
 
     if (!hasEnteredName) {
@@ -1213,6 +1222,21 @@ function AppContent() {
       )}
     </div>
   );
+  } catch (err: any) {
+    console.error("Critical Render Error:", err);
+    return (
+      <div className="flex items-center justify-center h-screen p-6 text-center bg-rbg">
+        <div className="card max-w-md p-8 border-red-200">
+          <div className="text-red-500 mb-4"><AlertCircle size={48} className="mx-auto" /></div>
+          <h2 className="text-xl font-bold mb-2 text-rt">Application Error</h2>
+          <p className="text-rt opacity-80 mb-6 text-sm">
+            {err?.message || "A critical error occurred while rendering the application."}
+          </p>
+          <button className="btn btn-navy w-full" onClick={() => window.location.reload()}>Reload Application</button>
+        </div>
+      </div>
+    );
+  }
 }
 
 interface TicketItemProps {

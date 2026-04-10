@@ -303,7 +303,15 @@ function AppContent() {
         config: { responseMimeType: "application/json" }
       });
 
-      const parsed = JSON.parse(response.text || '{}');
+      let text = response.text || '{}';
+      // Clean up potential markdown code blocks if the model ignored the raw JSON instruction
+      if (text.includes('```json')) {
+        text = text.split('```json')[1].split('```')[0];
+      } else if (text.includes('```')) {
+        text = text.split('```')[1].split('```')[0];
+      }
+      
+      const parsed = JSON.parse(text.trim());
       setLastGenerated(parsed);
       setIsGenerating(false);
       showToast("Exit ticket generated!", "success");
@@ -659,9 +667,7 @@ function AppContent() {
         </nav>
         <div className="sb-footer">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-6 h-6 rounded-full bg-teal flex items-center justify-center text-[10px] text-white font-bold">GT</div>
-            <span className="text-white/60 truncate">Guest Teacher</span>
-          </div>
+           
           Exit Ticket Studio 
         </div>
       </aside>

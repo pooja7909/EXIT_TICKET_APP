@@ -2,71 +2,22 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // ===============================================================
-    // Assumed Data Model
+    // Shared Collaborative Rules
     // ===============================================================
-    //
-    // Collection: tickets
-    // Document ID: auto-generated
-    // Fields:
-    //   - name: string (required)
-    //   - subject: string (optional)
-    //   - topic: string (optional)
-    //   - cls: string (optional)
-    //   - status: string (enum: ['active', 'draft'])
-    //   - type: string (enum: ['quiz', 'circle', 'reflect', 'mixed', 'upload'])
-    //   - source: string (enum: ['generated', 'manual', 'upload', 'link'])
-    //   - html: string (optional)
-    //   - learnerAmbitions: list (strings)
-    //   - color: string (optional)
-    //   - created: string (optional)
-    //   - url: string (optional)
-    //   - teacherId: string (required)
-    //   - teacherEmail: string (optional)
-    //
-    // ===============================================================
-
-    // ===============================================================
-    // Helper Functions
-    // ===============================================================
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
-    function isValidTicket(data) {
-      return data.name is string && data.name.size() > 0 && data.name.size() < 500 &&
-             data.status in ['active', 'draft'] &&
-             data.type in ['quiz', 'circle', 'reflect', 'mixed', 'upload'] &&
-             data.source in ['generated', 'manual', 'upload', 'link'] &&
-             data.teacherId is string &&
-             (!('subject' in data) || (data.subject is string && data.subject.size() < 200)) &&
-             (!('topic' in data) || (data.topic is string && data.topic.size() < 200)) &&
-             (!('cls' in data) || (data.cls is string && data.cls.size() < 100)) &&
-             (!('color' in data) || (data.color is string && data.color.size() < 20)) &&
-             (!('created' in data) || (data.created is string)) &&
-             (!('teacherEmail' in data) || (data.teacherEmail is string && data.teacherEmail.size() < 200)) &&
-             (!('html' in data) || (data.html is string && data.html.size() < 1048576)) && // 1MB limit
-             (!('url' in data) || (data.url is string && data.url.size() < 2048)) &&
-             (!('learnerAmbitions' in data) || (data.learnerAmbitions is list && data.learnerAmbitions.size() < 20)) &&
-             (!('questions' in data) || (data.questions is list && data.questions.size() < 50));
-    }
-
+    
     match /tickets/{ticketId} {
-      // Public access for collaborative use without login as requested
-      allow read: if true;
-      
-      allow create: if isValidTicket(request.resource.data);
-      
-      allow update: if isValidTicket(request.resource.data);
-      
-      allow delete: if true;
+      // Allow public read/write for collaborative use without login
+      allow read, write: if true;
     }
 
-    match /users/{userId} {
-      allow read, write: if isOwner(userId);
+    match /test/{docId} {
+      // Used for connection testing
+      allow read: if true;
+    }
+
+    // Default deny for everything else
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

@@ -38,7 +38,7 @@
   "firestore": {
     "tickets": {
       "schema": "Ticket",
-      "description": "A collection of all exit tickets created by teachers."
+      "description": "A shared collaborative collection of all exit tickets, accessible by all teachers without login."
     }
   }
 }

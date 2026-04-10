@@ -5,24 +5,23 @@ import firebaseConfigJson from '../firebase-applet-config.json';
 
 // Use environment variables if available (for Vercel/GitHub), 
 // otherwise fall back to the JSON file (for AI Studio/local dev).
-const getEnv = (key: string) => {
-  // @ts-ignore
-  return (typeof process !== 'undefined' && process.env && process.env[key]) || 
-         // @ts-ignore
-         import.meta.env[key] || 
-         // @ts-ignore
-         (import.meta as any).env?.[key];
-};
-
 const firebaseConfig = {
-  projectId: getEnv('VITE_FIREBASE_PROJECT_ID') || firebaseConfigJson.projectId,
-  appId: getEnv('VITE_FIREBASE_APP_ID') || firebaseConfigJson.appId,
-  apiKey: getEnv('VITE_FIREBASE_API_KEY') || firebaseConfigJson.apiKey,
-  authDomain: getEnv('VITE_FIREBASE_AUTH_DOMAIN') || firebaseConfigJson.authDomain,
-  firestoreDatabaseId: getEnv('VITE_FIREBASE_FIRESTORE_DATABASE_ID') || firebaseConfigJson.firestoreDatabaseId,
-  storageBucket: getEnv('VITE_FIREBASE_STORAGE_BUCKET') || firebaseConfigJson.storageBucket,
-  messagingSenderId: getEnv('VITE_FIREBASE_MESSAGING_SENDER_ID') || firebaseConfigJson.messagingSenderId,
-  measurementId: getEnv('VITE_FIREBASE_MEASUREMENT_ID') || firebaseConfigJson.measurementId,
+  // @ts-ignore
+  projectId: process.env.VITE_FIREBASE_PROJECT_ID || firebaseConfigJson.projectId,
+  // @ts-ignore
+  appId: process.env.VITE_FIREBASE_APP_ID || firebaseConfigJson.appId,
+  // @ts-ignore
+  apiKey: process.env.VITE_FIREBASE_API_KEY || firebaseConfigJson.apiKey,
+  // @ts-ignore
+  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfigJson.authDomain,
+  // @ts-ignore
+  firestoreDatabaseId: process.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || firebaseConfigJson.firestoreDatabaseId,
+  // @ts-ignore
+  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfigJson.storageBucket,
+  // @ts-ignore
+  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfigJson.messagingSenderId,
+  // @ts-ignore
+  measurementId: process.env.VITE_FIREBASE_MEASUREMENT_ID || firebaseConfigJson.measurementId,
 };
 
 // Validate config before initializing

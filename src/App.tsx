@@ -147,18 +147,8 @@ const ErrorBoundary: any = class extends Component<any, any> {
 
 function AppContent() {
   const [user, setUser] = useState<User | null>(null);
-  const [isStudentView, setIsStudentView] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return new URLSearchParams(window.location.search).get('view') === 'student';
-    }
-    return false;
-  });
-  const [isAuthReady, setIsAuthReady] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return new URLSearchParams(window.location.search).get('view') === 'student';
-    }
-    return false;
-  });
+  const [isStudentView, setIsStudentView] = useState(false);
+  const [isAuthReady, setIsAuthReady] = useState(false);
   const [studentName, setStudentName] = useState('');
   const [hasEnteredName, setHasEnteredName] = useState(false);
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -168,6 +158,11 @@ function AppContent() {
   const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' | '' } | null>(null);
   const [editingTicketId, setEditingTicketId] = useState<string | null>(null);
   
+  const navigate = (page: string) => {
+    setCurrentPage(page);
+    setSelectedSubject(null);
+  };
+
   // AI Gen State
   const [genName, setGenName] = useState('');
   const [genSubject, setGenSubject] = useState('');
@@ -221,7 +216,7 @@ function AppContent() {
       setIsAuthReady(true);
     });
 
-    // Check for student view (already handled in initial state, but keeping for safety)
+    // Check for student view
     const params = new URLSearchParams(window.location.search);
     if (params.get('view') === 'student') {
       setIsStudentView(true);
@@ -689,7 +684,16 @@ function AppContent() {
     return t.type === libFilter;
   });
 
-  if (!isAuthReady) return <div className="flex items-center justify-center h-screen"><div className="spinner"></div></div>;
+  if (!isAuthReady) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-off">
+        <div className="text-center">
+          <div className="spinner mb-4"></div>
+          <div className="text-t3 text-sm">Loading ExitStudio...</div>
+        </div>
+      </div>
+    );
+  }
 
   if (isStudentView) {
     const activeTickets = tickets.filter(t => t.status === 'active');
@@ -755,7 +759,7 @@ function AppContent() {
                   <div className="ticket-info">
                     <div className="ticket-name">{t.name}</div>
                     <div className="ticket-meta">
-                      <span className={`tbadge ${typeCls[t.type]}`}>{typeLabels[t.type]}</span>
+                      <span className={`tbadge ${typeCls[t.type] || 'bu'}`}>{typeLabels[t.type] || t.type}</span>
                       <span>{t.subject} • {t.topic}</span>
                     </div>
                   </div>
@@ -771,11 +775,6 @@ function AppContent() {
       </div>
     );
   }
-
-  const navigate = (page: string) => {
-    setCurrentPage(page);
-    setSelectedSubject(null);
-  };
 
   return (
     <div className="layout">

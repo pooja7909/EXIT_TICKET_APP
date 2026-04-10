@@ -40,7 +40,10 @@ import {
   Eye,
   CheckCircle,
   AlertCircle,
-  QrCode
+  QrCode,
+  Folder,
+  ChevronRight,
+  ArrowLeft
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -151,6 +154,7 @@ function AppContent() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [libFilter, setLibFilter] = useState('all');
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' | '' } | null>(null);
   const [editingTicketId, setEditingTicketId] = useState<string | null>(null);
   
@@ -367,7 +371,7 @@ function AppContent() {
     try {
       await addDoc(collection(db, 'tickets'), ticketData);
       showToast("Saved to library!", "success");
-      setCurrentPage('library');
+      navigate('library');
       // Reset
       setLastGenerated(null);
       setGenName('');
@@ -446,7 +450,7 @@ function AppContent() {
         await addDoc(collection(db, 'tickets'), ticketData);
         showToast("Ticket saved!", "success");
       }
-      setCurrentPage('library');
+      navigate('library');
       // Reset
       setEditingTicketId(null);
       setManualName('');
@@ -503,7 +507,7 @@ function AppContent() {
       try {
         await addDoc(collection(db, 'tickets'), ticketData);
         showToast(`"${name}" uploaded!`, "success");
-        setCurrentPage('library');
+        navigate('library');
       } catch (err) {
         handleFirestoreError(err, OperationType.CREATE, 'tickets');
       }
@@ -533,7 +537,7 @@ function AppContent() {
     try {
       await addDoc(collection(db, 'tickets'), ticketData);
       showToast("Link added!", "success");
-      setCurrentPage('library');
+      navigate('library');
       setUlName('');
       setUlUrl('');
     } catch (e) {
@@ -596,7 +600,7 @@ function AppContent() {
     setManualStatus(ticket.status);
     setManualLAs(ticket.learnerAmbitions || []);
     setManualQs(ticket.questions || []);
-    setCurrentPage('build');
+    navigate('build');
     setManualPreviewHTML('');
   };
 
@@ -759,6 +763,11 @@ function AppContent() {
     );
   }
 
+  const navigate = (page: string) => {
+    setCurrentPage(page);
+    setSelectedSubject(null);
+  };
+
   return (
     <div className="layout">
       <aside className="sidebar">
@@ -771,23 +780,23 @@ function AppContent() {
         </div>
         <nav className="sb-nav">
           <div className="sb-sec">Workspace</div>
-          <button className={`nav-btn ${currentPage === 'dashboard' ? 'active' : ''}`} onClick={() => setCurrentPage('dashboard')}>
+          <button className={`nav-btn ${currentPage === 'dashboard' ? 'active' : ''}`} onClick={() => navigate('dashboard')}>
             <LayoutGrid className="ni" /> Dashboard
           </button>
-          <button className={`nav-btn ${currentPage === 'generate' ? 'active' : ''}`} onClick={() => setCurrentPage('generate')}>
+          <button className={`nav-btn ${currentPage === 'generate' ? 'active' : ''}`} onClick={() => navigate('generate')}>
             <Sparkles className="ni" /> AI Generate
           </button>
-          <button className={`nav-btn ${currentPage === 'build' ? 'active' : ''}`} onClick={() => setCurrentPage('build')}>
+          <button className={`nav-btn ${currentPage === 'build' ? 'active' : ''}`} onClick={() => navigate('build')}>
             <PlusSquare className="ni" /> Build manually
           </button>
-          <button className={`nav-btn ${currentPage === 'upload' ? 'active' : ''}`} onClick={() => setCurrentPage('upload')}>
+          <button className={`nav-btn ${currentPage === 'upload' ? 'active' : ''}`} onClick={() => navigate('upload')}>
             <Upload className="ni" /> Upload existing
           </button>
           <div className="sb-sec">Library</div>
-          <button className={`nav-btn ${currentPage === 'library' ? 'active' : ''}`} onClick={() => setCurrentPage('library')}>
+          <button className={`nav-btn ${currentPage === 'library' ? 'active' : ''}`} onClick={() => navigate('library')}>
             <Library className="ni" /> All tickets <span className="nb hi">{tickets.length}</span>
           </button>
-          <button className={`nav-btn ${currentPage === 'share' ? 'active' : ''}`} onClick={() => setCurrentPage('share')}>
+          <button className={`nav-btn ${currentPage === 'share' ? 'active' : ''}`} onClick={() => navigate('share')}>
             <Share2 className="ni" /> Share with students
           </button>
         </nav>
@@ -804,7 +813,7 @@ function AppContent() {
         <div className="topbar">
           <span className="topbar-title capitalize">{currentPage.replace('-', ' ')}</span>
           <div className="topbar-actions">
-            <button className="btn btn-teal btn-sm" onClick={() => setCurrentPage('generate')}>+ New ticket</button>
+            <button className="btn btn-teal btn-sm" onClick={() => navigate('generate')}>+ New ticket</button>
           </div>
         </div>
 
@@ -820,7 +829,7 @@ function AppContent() {
               </div>
               <div className="sec-hdr">
                 <span className="sec-title">Recent tickets</span>
-                <button className="btn btn-outline btn-sm" onClick={() => setCurrentPage('library')}>View all</button>
+                <button className="btn btn-outline btn-sm" onClick={() => navigate('library')}>View all</button>
               </div>
               <div id="recent-list">
                 {tickets.length === 0 ? (
@@ -1000,7 +1009,7 @@ function AppContent() {
                       setManualName('');
                       setManualQs([]);
                       setManualLAs([]);
-                      setCurrentPage('library');
+                      navigate('library');
                     }}>Cancel Edit</button>
                   )}
                 </div>
@@ -1041,25 +1050,79 @@ function AppContent() {
           {/* LIBRARY */}
           {currentPage === 'library' && (
             <div className="page active">
-              <div className="pills">
-                {['all', 'quiz', 'circle', 'reflect', 'mixed', 'upload', 'active', 'draft'].map(f => (
-                  <button key={f} className={`pill capitalize ${libFilter === f ? 'active' : ''}`} onClick={() => setLibFilter(f)}>{f}</button>
-                ))}
-                {Object.keys(LA_COLORS).map(la => (
-                  <button key={la} className={`pill ${libFilter === `la:${la}` ? 'active' : ''}`} style={{ background: LA_COLORS[la].bg, color: LA_COLORS[la].color, borderColor: LA_COLORS[la].color }} onClick={() => setLibFilter(`la:${la}`)}>
-                    {la}
-                  </button>
-                ))}
-              </div>
-              <div className="space-y-2">
-                {filteredTickets.length === 0 ? (
-                  <div className="empty"><div className="empty-icon">📋</div><div className="empty-title">No tickets found</div><div className="empty-sub">Try a different filter</div></div>
-                ) : (
-                  filteredTickets.map(t => (
-                    <TicketItem key={t.id} ticket={t} user={user} onDelete={deleteTicket} onToggleActive={toggleActive} onPreview={previewTicket} onDownload={downloadTicket} onEdit={editTicket} />
-                  ))
-                )}
-              </div>
+              {!selectedSubject ? (
+                <>
+                  <div className="sec-hdr">
+                    <span className="sec-title">Subject Folders</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                    {Array.from(new Set(tickets.map(t => t.subject || 'Uncategorized'))).sort().map(subject => {
+                      const count = tickets.filter(t => (t.subject || 'Uncategorized') === subject).length;
+                      return (
+                        <div 
+                          key={subject} 
+                          className="card flex items-center gap-4 cursor-pointer hover:border-teal transition-all group"
+                          onClick={() => setSelectedSubject(subject)}
+                        >
+                          <div className="w-12 h-12 rounded-xl bg-teal/10 flex items-center justify-center text-teal group-hover:bg-teal group-hover:text-white transition-all">
+                            <Folder size={24} />
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-semibold text-t1">{subject}</div>
+                            <div className="text-xs text-t3">{count} {count === 1 ? 'ticket' : 'tickets'}</div>
+                          </div>
+                          <ChevronRight size={16} className="text-t3" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  <div className="divider"></div>
+                  
+                  <div className="sec-hdr">
+                    <span className="sec-title">Quick Filters</span>
+                  </div>
+                  <div className="pills">
+                    {['all', 'quiz', 'circle', 'reflect', 'mixed', 'upload', 'active', 'draft'].map(f => (
+                      <button key={f} className={`pill capitalize ${libFilter === f ? 'active' : ''}`} onClick={() => setLibFilter(f)}>{f}</button>
+                    ))}
+                    {Object.keys(LA_COLORS).map(la => (
+                      <button key={la} className={`pill ${libFilter === `la:${la}` ? 'active' : ''}`} style={{ background: LA_COLORS[la].bg, color: LA_COLORS[la].color, borderColor: LA_COLORS[la].color }} onClick={() => setLibFilter(`la:${la}`)}>
+                        {la}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="space-y-2">
+                    {filteredTickets.length === 0 ? (
+                      <div className="empty"><div className="empty-icon">📋</div><div className="empty-title">No tickets found</div><div className="empty-sub">Try a different filter</div></div>
+                    ) : (
+                      filteredTickets.map(t => (
+                        <TicketItem key={t.id} ticket={t} user={user} onDelete={deleteTicket} onToggleActive={toggleActive} onPreview={previewTicket} onDownload={downloadTicket} onEdit={editTicket} />
+                      ))
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3 mb-6">
+                    <button className="btn btn-outline btn-sm" onClick={() => setSelectedSubject(null)}>
+                      <ArrowLeft size={14} /> Back to folders
+                    </button>
+                    <h2 className="text-xl font-bold font-serif text-t1 flex items-center gap-2">
+                      <Folder size={20} className="text-teal" /> {selectedSubject}
+                    </h2>
+                  </div>
+                  <div className="space-y-2">
+                    {tickets.filter(t => (t.subject || 'Uncategorized') === selectedSubject).length === 0 ? (
+                      <div className="empty"><div className="empty-icon">📋</div><div className="empty-title">No tickets in this folder</div></div>
+                    ) : (
+                      tickets.filter(t => (t.subject || 'Uncategorized') === selectedSubject).map(t => (
+                        <TicketItem key={t.id} ticket={t} user={user} onDelete={deleteTicket} onToggleActive={toggleActive} onPreview={previewTicket} onDownload={downloadTicket} onEdit={editTicket} />
+                      ))
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )}
 

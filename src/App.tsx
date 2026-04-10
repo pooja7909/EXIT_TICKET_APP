@@ -23,7 +23,7 @@ import {
   signOut
 } from 'firebase/auth';
 import { GoogleGenAI } from "@google/genai";
-import { db, auth } from './firebase';
+import { db, auth, firebaseConfig } from './firebase';
 import { Ticket, TicketType, TicketStatus, Question } from './types';
 import { 
   LayoutGrid, 
@@ -824,11 +824,15 @@ function AppContent() {
           </button>
         </nav>
         <div className="sb-footer">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-6 h-6 rounded-full bg-teal flex items-center justify-center text-[10px] text-white font-bold">GT</div>
-            <span className="text-white/60 truncate">Guest Teacher</span>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-6 h-6 rounded-full bg-teal flex items-center justify-center text-[10px] text-white font-bold">
+              {user?.email?.slice(0, 2).toUpperCase() || '??'}
+            </div>
+            <span className="text-white/60 truncate text-xs">{user?.email || 'Not logged in'}</span>
           </div>
-          Exit Ticket Studio 
+          <div className="text-[10px] text-white/30 uppercase tracking-widest font-bold">
+            Project: {firebaseConfig.projectId?.slice(0, 10)}...
+          </div>
         </div>
       </aside>
 
@@ -850,6 +854,18 @@ function AppContent() {
                 <div className="stat"><div className="stat-l">AI generated</div><div className="stat-v text-purple">{tickets.filter(t => t.source === 'generated').length}</div><div className="stat-s">tickets</div></div>
                 <div className="stat"><div className="stat-l">Uploaded</div><div className="stat-v text-amber">{tickets.filter(t => t.source === 'upload' || t.source === 'link').length}</div><div className="stat-s">your files</div></div>
               </div>
+
+              {tickets.length === 0 && (
+                <div className="mt-8 p-6 bg-blue-50 border border-blue-100 rounded-xl text-center">
+                  <div className="text-blue-500 mb-2"><Library size={32} className="mx-auto" /></div>
+                  <h3 className="text-blue-900 font-bold">Your library is empty</h3>
+                  <p className="text-blue-700 text-sm mb-4">If you previously had data, please verify you are logged in with the correct email: <strong>{user?.email}</strong></p>
+                  <div className="flex justify-center gap-3">
+                    <button className="btn btn-teal btn-sm" onClick={() => navigate('generate')}>Generate your first ticket</button>
+                    <button className="btn btn-outline btn-sm" onClick={() => signOut(auth)}>Switch Account</button>
+                  </div>
+                </div>
+              )}
               <div className="sec-hdr">
                 <span className="sec-title">Recent tickets</span>
                 <button className="btn btn-outline btn-sm" onClick={() => navigate('library')}>View all</button>

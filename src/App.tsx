@@ -659,7 +659,9 @@ function AppContent() {
         </nav>
         <div className="sb-footer">
           <div className="flex items-center gap-2 mb-4">
-           
+            <div className="w-6 h-6 rounded-full bg-teal flex items-center justify-center text-[10px] text-white font-bold">GT</div>
+            <span className="text-white/60 truncate">Guest Teacher</span>
+          </div>
           Exit Ticket Studio 
         </div>
       </aside>
@@ -973,7 +975,6 @@ function AppContent() {
 }
 
 interface TicketItemProps {
-  key?: string | number;
   ticket: Ticket;
   user: User | null;
   onDelete: (id: string) => Promise<void>;
@@ -982,7 +983,8 @@ interface TicketItemProps {
   onDownload: (t: Ticket) => void;
 }
 
-function TicketItem({ ticket, user, onDelete, onToggleActive, onPreview, onDownload }: TicketItemProps) {
+function TicketItem(props: any) {
+  const { ticket, user, onDelete, onToggleActive, onPreview, onDownload } = props as TicketItemProps;
   const isOwner = true; // Everyone can manage all tickets in this shared version
   const typeLabels: Record<string, string> = { quiz: 'Quiz', circle: 'Emoji', reflect: 'Reflection', mixed: 'Mixed', upload: 'Uploaded' };
   const typeCls: Record<string, string> = { quiz: 'bq', circle: 'bc', reflect: 'br', mixed: 'bq', upload: 'bu' };

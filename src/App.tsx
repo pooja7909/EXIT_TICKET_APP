@@ -827,15 +827,9 @@ function AppContent() {
           </button>
         </nav>
         <div className="sb-footer">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-6 h-6 rounded-full bg-teal flex items-center justify-center text-[10px] text-white font-bold">
-              {user?.email?.slice(0, 2).toUpperCase() || '??'}
-            </div>
-            <span className="text-white/60 truncate text-xs">{user?.email || 'Not logged in'}</span>
-          </div>
-          <div className="text-[10px] text-white/30 uppercase tracking-widest font-bold">
-            Project: {firebaseConfig.projectId?.slice(0, 10)}...
-          </div>
+          <button className="nav-btn w-full justify-start" onClick={logout}>
+            <LogOut className="ni" /> Logout
+          </button>
         </div>
       </aside>
 
@@ -859,13 +853,13 @@ function AppContent() {
               </div>
 
               {tickets.length === 0 && (
-                <div className="mt-8 p-6 bg-blue-50 border border-blue-100 rounded-xl text-center">
-                  <div className="text-blue-500 mb-2"><Library size={32} className="mx-auto" /></div>
-                  <h3 className="text-blue-900 font-bold">Your library is empty</h3>
-                  <p className="text-blue-700 text-sm mb-4">If you previously had data, please verify you are logged in with the correct email: <strong>{user?.email}</strong></p>
+                <div className="mt-8 p-10 bg-white border border-b1 rounded-xl text-center">
+                  <div className="text-t3 mb-4"><Library size={48} className="mx-auto opacity-20" /></div>
+                  <h3 className="text-t1 font-bold text-lg">Your library is empty</h3>
+                  <p className="text-t2 text-sm mb-6">Start by generating an exit ticket with AI or building one manually.</p>
                   <div className="flex justify-center gap-3">
-                    <button className="btn btn-teal btn-sm" onClick={() => navigate('generate')}>Generate your first ticket</button>
-                    <button className="btn btn-outline btn-sm" onClick={() => signOut(auth)}>Switch Account</button>
+                    <button className="btn btn-teal" onClick={() => navigate('generate')}>Generate with AI</button>
+                    <button className="btn btn-outline" onClick={() => navigate('build')}>Build manually</button>
                   </div>
                 </div>
               )}

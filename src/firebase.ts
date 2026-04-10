@@ -25,13 +25,23 @@ const firebaseConfig = {
   measurementId: getEnv('VITE_FIREBASE_MEASUREMENT_ID') || getEnv('VITE_MEASUREMENT_ID') || firebaseConfigJson.measurementId,
 };
 
-let app;
-try {
-  app = initializeApp(firebaseConfig);
-} catch (e) {
-  console.error("Firebase initialization failed:", e);
-  app = {} as any;
+// Validate config before initializing
+const isConfigValid = firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId;
+
+let app: any;
+let db: any;
+let auth: any;
+
+if (isConfigValid) {
+  try {
+    app = initializeApp(firebaseConfig);
+    db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+    auth = getAuth(app);
+  } catch (e) {
+    console.error("Firebase initialization failed:", e);
+  }
+} else {
+  console.error("Firebase config is missing required fields. Check environment variables or firebase-applet-config.json.");
 }
 
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-export const auth = getAuth(app);
+export { db, auth };

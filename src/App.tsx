@@ -294,7 +294,7 @@ function AppContent() {
 
     try {
       if (!process.env.GEMINI_API_KEY) {
-        throw new Error("GEMINI_API_KEY is missing. Please add it to your environment variables in Vercel.");
+        throw new Error("GEMINI_API_KEY is missing. If you just added it to Vercel, you MUST trigger a new 'Redeploy' for it to take effect.");
       }
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const response = await ai.models.generateContent({

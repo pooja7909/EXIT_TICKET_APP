@@ -659,9 +659,7 @@ function AppContent() {
         </nav>
         <div className="sb-footer">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-6 h-6 rounded-full bg-teal flex items-center justify-center text-[10px] text-white font-bold">GT</div>
            
-          </div>
           Exit Ticket Studio 
         </div>
       </aside>

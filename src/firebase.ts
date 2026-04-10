@@ -5,24 +5,23 @@ import firebaseConfigJson from '../firebase-applet-config.json';
 
 // Use environment variables if available (for Vercel/GitHub), 
 // otherwise fall back to the JSON file (for AI Studio/local dev).
-// Defensive configuration retrieval
-const getEnv = (key: string) => {
-  try {
-    return (import.meta as any).env[key];
-  } catch (e) {
-    return undefined;
-  }
-};
-
 const firebaseConfig = {
-  projectId: getEnv('VITE_FIREBASE_PROJECT_ID') || getEnv('VITE_PROJECT_ID') || firebaseConfigJson.projectId,
-  appId: getEnv('VITE_FIREBASE_APP_ID') || getEnv('VITE_APP_ID') || firebaseConfigJson.appId,
-  apiKey: getEnv('VITE_FIREBASE_API_KEY') || getEnv('VITE_API_KEY') || firebaseConfigJson.apiKey,
-  authDomain: getEnv('VITE_FIREBASE_AUTH_DOMAIN') || getEnv('VITE_AUTH_DOMAIN') || firebaseConfigJson.authDomain,
-  firestoreDatabaseId: getEnv('VITE_FIREBASE_FIRESTORE_DATABASE_ID') || getEnv('VITE_FIRESTORE_DATABASE_ID') || firebaseConfigJson.firestoreDatabaseId,
-  storageBucket: getEnv('VITE_FIREBASE_STORAGE_BUCKET') || getEnv('VITE_STORAGE_BUCKET') || firebaseConfigJson.storageBucket,
-  messagingSenderId: getEnv('VITE_FIREBASE_MESSAGING_SENDER_ID') || getEnv('VITE_MESSAGING_SENDER_ID') || firebaseConfigJson.messagingSenderId,
-  measurementId: getEnv('VITE_FIREBASE_MEASUREMENT_ID') || getEnv('VITE_MEASUREMENT_ID') || firebaseConfigJson.measurementId,
+  // @ts-ignore
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || import.meta.env.VITE_PROJECT_ID || firebaseConfigJson.projectId,
+  // @ts-ignore
+  appId: import.meta.env.VITE_APP_ID || import.meta.env.VITE_FIREBASE_APP_ID || firebaseConfigJson.appId,
+  // @ts-ignore
+  apiKey: import.meta.env.VITE_API_KEY || import.meta.env.VITE_FIREBASE_API_KEY || firebaseConfigJson.apiKey,
+  // @ts-ignore
+  authDomain: import.meta.env.VITE_AUTH_DOMAIN || import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfigJson.authDomain,
+  // @ts-ignore
+  firestoreDatabaseId: import.meta.env.VITE_FIRESTORE_DATABASE_ID || import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || firebaseConfigJson.firestoreDatabaseId,
+  // @ts-ignore
+  storageBucket: import.meta.env.VITE_STORAGE_BUCKET || import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfigJson.storageBucket,
+  // @ts-ignore
+  messagingSenderId: import.meta.env.VITE_MESSAGING_SENDER_ID || import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfigJson.messagingSenderId,
+  // @ts-ignore
+  measurementId: import.meta.env.VITE_MEASUREMENT_ID || import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || firebaseConfigJson.measurementId,
 };
 
 // Validate config before initializing
@@ -44,4 +43,4 @@ if (isConfigValid) {
   console.error("Firebase config is missing required fields. Check environment variables or firebase-applet-config.json.");
 }
 
-export { db, auth };
+export { db, auth, firebaseConfig };

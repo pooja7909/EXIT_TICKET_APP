@@ -33,12 +33,42 @@
         }
       },
       "required": ["name", "status", "type", "source", "teacherId"]
+    },
+    "Response": {
+      "title": "Response",
+      "description": "A student's response to an exit ticket.",
+      "type": "object",
+      "properties": {
+        "ticketId": { "type": "string", "description": "The ID of the ticket being answered." },
+        "ticketName": { "type": "string", "description": "The name of the ticket at the time of submission." },
+        "studentName": { "type": "string", "description": "The name entered by the student." },
+        "yearGroup": { "type": "string", "description": "The year group or class of the student." },
+        "answers": { 
+          "type": "array", 
+          "items": { 
+            "type": "object",
+            "properties": {
+              "questionIndex": { "type": "integer" },
+              "questionText": { "type": "string" },
+              "answer": { "type": "string" },
+              "isCorrect": { "type": "boolean" }
+            }
+          }
+        },
+        "submittedAt": { "type": "string", "description": "ISO date string of submission." },
+        "teacherId": { "type": "string", "description": "The UID of the teacher who owns the ticket." }
+      },
+      "required": ["ticketId", "studentName", "submittedAt", "teacherId"]
     }
   },
   "firestore": {
     "tickets": {
       "schema": "Ticket",
-      "description": "A shared collaborative collection of all exit tickets, accessible by all teachers without login."
+      "description": "A shared collaborative collection of all exit tickets."
+    },
+    "responses": {
+      "schema": "Response",
+      "description": "Student submissions for exit tickets."
     }
   }
 }

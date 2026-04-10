@@ -332,10 +332,12 @@ function AppContent() {
     const prompt = `You are a teacher creating an exit ticket for ${genSubject || 'a class'} on the topic "${genTopic || genSubject}". Key concepts: ${genConcepts || genTopic}. Difficulty: ${diffDesc[genDiff]}. Type: ${typeDesc[selectedType]}. Number of questions: ${genQCount}.${laCtx}\n\nGenerate an exit ticket as a JSON object only. No markdown, no explanation, just raw JSON.\n\nFor mcq questions include 4 options and a correct index (0-3).\nFor circle questions students rate with emojis.\nFor reflect questions students write a free response.\n\n{"title":"${genName}","subject":"${genSubject}","topic":"${genTopic}","type":"${selectedType}","questions":[{"type":"mcq","text":"question","options":["A","B","C","D"],"correct":0},{"type":"circle","text":"I can explain X"},{"type":"reflect","text":"Describe how..."}]}`;
 
     try {
-      if (!process.env.GEMINI_API_KEY) {
-        throw new Error("GEMINI_API_KEY is missing. If you just added it to Vercel, you MUST trigger a new 'Redeploy' for it to take effect.");
+      const apiKey = (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) || (import.meta as any).env?.VITE_GEMINI_API_KEY;
+      
+      if (!apiKey) {
+        throw new Error("GEMINI_API_KEY is missing. Please ensure you have set GEMINI_API_KEY (or VITE_GEMINI_API_KEY) in your environment variables. If you are using Vercel, add it to Project Settings > Environment Variables and then trigger a new 'Redeploy' for the changes to take effect.");
       }
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
         model: "gemini-3.1-flash-lite-preview",
         contents: prompt,

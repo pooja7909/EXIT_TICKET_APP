@@ -11,7 +11,7 @@ const firebaseConfig = {
   // @ts-ignore
   appId: process.env.VITE_FIREBASE_APP_ID || firebaseConfigJson.appId,
   // @ts-ignore
-  apiKey: process.env.VITE_FIREBASE_API_KEY || firebaseConfigJson.apiKey,
+  apiKey: process.env.VITE_FIREBASE_API_KEY || process.env.VITE_GOOGLE_API_KEY || firebaseConfigJson.apiKey,
   // @ts-ignore
   authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfigJson.authDomain,
   // @ts-ignore

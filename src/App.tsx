@@ -293,6 +293,9 @@ function AppContent() {
     const prompt = `You are a teacher creating an exit ticket for ${genSubject || 'a class'} on the topic "${genTopic || genSubject}". Key concepts: ${genConcepts || genTopic}. Difficulty: ${diffDesc[genDiff]}. Type: ${typeDesc[selectedType]}. Number of questions: ${genQCount}.${laCtx}\n\nGenerate an exit ticket as a JSON object only. No markdown, no explanation, just raw JSON.\n\nFor mcq questions include 4 options and a correct index (0-3).\nFor circle questions students rate with emojis.\nFor reflect questions students write a free response.\n\n{"title":"${genName}","subject":"${genSubject}","topic":"${genTopic}","type":"${selectedType}","questions":[{"type":"mcq","text":"question","options":["A","B","C","D"],"correct":0},{"type":"circle","text":"I can explain X"},{"type":"reflect","text":"Describe how..."}]}`;
 
     try {
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error("GEMINI_API_KEY is missing. Please add it to your environment variables in Vercel.");
+      }
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const response = await ai.models.generateContent({
         model: "gemini-3.1-pro-preview",
@@ -304,10 +307,11 @@ function AppContent() {
       setLastGenerated(parsed);
       setIsGenerating(false);
       showToast("Exit ticket generated!", "success");
-    } catch (e) {
+    } catch (e: any) {
       console.error("AI Gen Error:", e);
       setIsGenerating(false);
-      setGenError('Generation failed. Please try again.');
+      const errorMsg = e.message || 'Unknown error';
+      setGenError(`Generation failed: ${errorMsg}. If you are on Vercel, ensure GEMINI_API_KEY is set.`);
       showToast("Generation failed.", "error");
     }
   };
@@ -656,9 +660,9 @@ function AppContent() {
         <div className="sb-footer">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-6 h-6 rounded-full bg-teal flex items-center justify-center text-[10px] text-white font-bold">GT</div>
-            <span className="text-white/60 truncate">Guest Teacher</span>
+           
           </div>
-          IBDP Computer Science<br />Exit Ticket Studio v2
+          Exit Ticket Studio 
         </div>
       </aside>
 

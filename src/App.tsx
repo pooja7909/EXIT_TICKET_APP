@@ -146,6 +146,8 @@ function AppContent() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [isStudentView, setIsStudentView] = useState(false);
+  const [studentName, setStudentName] = useState('');
+  const [hasEnteredName, setHasEnteredName] = useState(false);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [libFilter, setLibFilter] = useState('all');
@@ -209,6 +211,8 @@ function AppContent() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('view') === 'student') {
       setIsStudentView(true);
+      // If we are in student view, we don't care about auth ready for the teacher
+      setIsAuthReady(true);
     }
 
     return () => unsubscribe();
@@ -676,6 +680,40 @@ function AppContent() {
 
   if (isStudentView) {
     const activeTickets = tickets.filter(t => t.status === 'active');
+
+    if (!hasEnteredName) {
+      return (
+        <div className="student-view flex items-center justify-center p-6">
+          <div className="card w-full max-w-md shadow-xl">
+            <div className="logo-row justify-center mb-6">
+              <div className="logo-box">E</div>
+              <span className="logo-text text-2xl">ExitStudio</span>
+            </div>
+            <h2 className="text-center text-xl font-semibold mb-2">Welcome!</h2>
+            <p className="text-center text-t2 text-sm mb-6">Please enter your name to see your exit tickets.</p>
+            <div className="form-section">
+              <label className="form-label">Your Name</label>
+              <input 
+                type="text" 
+                value={studentName} 
+                onChange={e => setStudentName(e.target.value)} 
+                placeholder="Enter your full name"
+                className="text-lg py-3"
+                onKeyDown={e => e.key === 'Enter' && studentName.trim() && setHasEnteredName(true)}
+              />
+            </div>
+            <button 
+              className="btn btn-teal w-full py-3 text-lg" 
+              disabled={!studentName.trim()}
+              onClick={() => setHasEnteredName(true)}
+            >
+              View My Tickets
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="student-view">
         <header className="student-header">
@@ -683,7 +721,10 @@ function AppContent() {
             <div className="logo-box">E</div>
             <span className="logo-text">ExitStudio</span>
           </div>
-          <h1 className="text-white/80 font-medium">Student Portal</h1>
+          <div className="flex flex-col items-end">
+            <h1 className="text-white/80 font-medium">Student Portal</h1>
+            <span className="text-[10px] text-white/40 uppercase font-bold tracking-wider">Student: {studentName}</span>
+          </div>
         </header>
         <main className="student-main">
           <div className="sec-title mb-6 text-xl">Active Exit Tickets</div>
@@ -1149,7 +1190,7 @@ function TicketItem(props: any) {
         )}
         {isOwner && (
           <button className="btn btn-outline btn-sm" onClick={() => onToggleActive(ticket)}>
-            {ticket.status === 'active' ? 'Draft' : 'Activate'}
+            {ticket.status === 'active' ? 'Stop Sharing' : 'Share with Students'}
           </button>
         )}
         {isOwner && <button className="btn btn-ghost btn-sm" onClick={() => onDelete(ticket.id)}><Trash2 size={14} /></button>}

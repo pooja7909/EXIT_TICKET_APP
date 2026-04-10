@@ -641,7 +641,7 @@ function AppContent() {
             <div className="logo-box">E</div>
             <span className="logo-text">ExitStudio</span>
           </div>
-          <div className="logo-sub">Teacher exit ticket builder</div>
+          <div className="logo-sub">Exit ticket builder </div>
         </div>
         <nav className="sb-nav">
           <div className="sb-sec">Workspace</div>

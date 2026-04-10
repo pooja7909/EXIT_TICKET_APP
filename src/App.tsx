@@ -39,8 +39,10 @@ import {
   Download,
   Eye,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  QrCode
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 
 const COLORS = ['#0C9488', '#534AB7', '#059669', '#D97706', '#DC2626', '#2563EB', '#7C3AED', '#0891B2', '#BE185D'];
 const LA_COLORS: Record<string, { bg: string, color: string }> = {
@@ -51,6 +53,9 @@ const LA_COLORS: Record<string, { bg: string, color: string }> = {
   Curious:       { bg: '#FFFBEB', color: '#78350F' },
   Communicative: { bg: '#FFF7ED', color: '#7C2D12' }
 };
+
+const typeLabels: Record<string, string> = { quiz: 'Quiz', circle: 'Emoji', reflect: 'Reflection', mixed: 'Mixed', upload: 'Uploaded' };
+const typeCls: Record<string, string> = { quiz: 'bq', circle: 'bc', reflect: 'br', mixed: 'bq', upload: 'bu' };
 
 enum OperationType {
   CREATE = 'create',
@@ -140,6 +145,7 @@ const ErrorBoundary: any = class extends Component<any, any> {
 function AppContent() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const [isStudentView, setIsStudentView] = useState(false);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [libFilter, setLibFilter] = useState('all');
@@ -197,6 +203,13 @@ function AppContent() {
       }
       setIsAuthReady(true);
     });
+
+    // Check for student view
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('view') === 'student') {
+      setIsStudentView(true);
+    }
+
     return () => unsubscribe();
   }, []);
 
@@ -633,6 +646,50 @@ function AppContent() {
 
   if (!isAuthReady) return <div className="flex items-center justify-center h-screen"><div className="spinner"></div></div>;
 
+  if (isStudentView) {
+    const activeTickets = tickets.filter(t => t.status === 'active');
+    return (
+      <div className="student-view">
+        <header className="student-header">
+          <div className="logo-row">
+            <div className="logo-box">E</div>
+            <span className="logo-text">ExitStudio</span>
+          </div>
+          <h1 className="text-white/80 font-medium">Student Portal</h1>
+        </header>
+        <main className="student-main">
+          <div className="sec-title mb-6 text-xl">Active Exit Tickets</div>
+          <div className="space-y-4">
+            {activeTickets.length === 0 ? (
+              <div className="empty">
+                <div className="empty-icon">📋</div>
+                <div className="empty-title">No active tickets</div>
+                <div className="empty-sub">Your teacher hasn't shared any tickets yet.</div>
+              </div>
+            ) : (
+              activeTickets.map(t => (
+                <div key={t.id} className="ticket-item">
+                  <div className="ticket-accent" style={{ background: t.color }}></div>
+                  <div className="ticket-info">
+                    <div className="ticket-name">{t.name}</div>
+                    <div className="ticket-meta">
+                      <span className={`tbadge ${typeCls[t.type]}`}>{typeLabels[t.type]}</span>
+                      <span>{t.subject} • {t.topic}</span>
+                    </div>
+                  </div>
+                  <button className="btn btn-teal btn-sm" onClick={() => previewTicket(t)}>Open Ticket</button>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="mt-12 pt-8 border-t border-b1 text-center text-t3 text-xs">
+            Powered by ExitStudio • Teacher Exit Ticket Builder
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="layout">
       <aside className="sidebar">
@@ -641,7 +698,7 @@ function AppContent() {
             <div className="logo-box">E</div>
             <span className="logo-text">ExitStudio</span>
           </div>
-          <div className="logo-sub">Exit ticket builder </div>
+          <div className="logo-sub">Teacher exit ticket builder</div>
         </div>
         <nav className="sb-nav">
           <div className="sb-sec">Workspace</div>
@@ -667,7 +724,9 @@ function AppContent() {
         </nav>
         <div className="sb-footer">
           <div className="flex items-center gap-2 mb-4">
-           
+            <div className="w-6 h-6 rounded-full bg-teal flex items-center justify-center text-[10px] text-white font-bold">GT</div>
+            <span className="text-white/60 truncate">Guest Teacher</span>
+          </div>
           Exit Ticket Studio 
         </div>
       </aside>
@@ -927,28 +986,53 @@ function AppContent() {
           {/* SHARE */}
           {currentPage === 'share' && (
             <div className="page active">
-              <div className="card mb-4">
-                <div className="sec-title mb-2">Share active tickets with students</div>
-                <p className="text-sm text-t2 mb-5 leading-relaxed">Download a student page listing all your <strong>active</strong> exit tickets. Upload to Microsoft Teams and share the link with your class.</p>
-                <div className="share-steps">
-                  <div className="step-box"><div className="step-num">1</div><div className="step-title">Export the page</div><div className="step-body">Click below to download the student HTML file.</div></div>
-                  <div className="step-box"><div className="step-num">2</div><div className="step-title">Upload to Teams</div><div className="step-body">Class channel → Files → Upload the file.</div></div>
-                  <div className="step-box"><div className="step-num">3</div><div className="step-title">Share the link</div><div className="step-body">Copy the Teams file link and post in your channel.</div></div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="card">
+                  <div className="sec-title mb-2">Share active tickets with students</div>
+                  <p className="text-sm text-t2 mb-5 leading-relaxed">Students can access all your <strong>active</strong> exit tickets by scanning the QR code or using the link below.</p>
+                  
+                  <div className="qr-container">
+                    <QRCodeSVG 
+                      value={`${window.location.origin}${window.location.pathname}?view=student`} 
+                      size={180}
+                      level="H"
+                      includeMargin={true}
+                    />
+                    <div className="text-center">
+                      <div className="text-xs font-bold text-navy mb-1 uppercase tracking-wider">Student Portal Link</div>
+                      <div className="text-xs text-teal font-mono break-all bg-off p-2 rounded border border-b1">
+                        {window.location.origin}{window.location.pathname}?view=student
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="divider"></div>
+
+                  <div className="sec-title mb-3 text-sm">Other sharing options</div>
+                  <div className="share-steps">
+                    <div className="step-box"><div className="step-num">1</div><div className="step-title">Export</div><div className="step-body">Download the student HTML file.</div></div>
+                    <div className="step-box"><div className="step-num">2</div><div className="step-title">Teams</div><div className="step-body">Upload to your class channel files.</div></div>
+                  </div>
+                  <button className="btn btn-outline w-full" onClick={exportStudentPage}>
+                    <Download size={14} /> Download student HTML page
+                  </button>
                 </div>
-                <div className="flex gap-2 flex-wrap">
-                  <button className="btn btn-teal" onClick={exportStudentPage}>Download student page</button>
-                </div>
-              </div>
-              <div className="card">
-                <div className="sec-title mb-3 text-sm">Active tickets included</div>
-                <div className="space-y-2">
-                  {tickets.filter(t => t.status === 'active').length === 0 ? (
-                    <div className="text-center p-4 text-t3 text-sm">No active tickets yet.</div>
-                  ) : (
-                    tickets.filter(t => t.status === 'active').map(t => (
-                      <TicketItem key={t.id} ticket={t} user={user} onDelete={deleteTicket} onToggleActive={toggleActive} onPreview={previewTicket} onDownload={downloadTicket} />
-                    ))
-                  )}
+
+                <div className="card">
+                  <div className="sec-title mb-3 text-sm">Active tickets included</div>
+                  <div className="space-y-2">
+                    {tickets.filter(t => t.status === 'active').length === 0 ? (
+                      <div className="empty">
+                        <div className="empty-icon">📋</div>
+                        <div className="empty-title">No active tickets yet.</div>
+                        <div className="empty-sub">Go to your library and set some tickets to 'Active'.</div>
+                      </div>
+                    ) : (
+                      tickets.filter(t => t.status === 'active').map(t => (
+                        <TicketItem key={t.id} ticket={t} user={user} onDelete={deleteTicket} onToggleActive={toggleActive} onPreview={previewTicket} onDownload={downloadTicket} />
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -992,8 +1076,6 @@ interface TicketItemProps {
 function TicketItem(props: any) {
   const { ticket, user, onDelete, onToggleActive, onPreview, onDownload } = props as TicketItemProps;
   const isOwner = true; // Everyone can manage all tickets in this shared version
-  const typeLabels: Record<string, string> = { quiz: 'Quiz', circle: 'Emoji', reflect: 'Reflection', mixed: 'Mixed', upload: 'Uploaded' };
-  const typeCls: Record<string, string> = { quiz: 'bq', circle: 'bc', reflect: 'br', mixed: 'bq', upload: 'bu' };
 
   return (
     <div className="ticket-item">

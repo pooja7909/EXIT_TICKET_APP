@@ -154,3 +154,41 @@ textarea{resize:vertical;min-height:90px;line-height:1.6}
 .api-steps{background:var(--off);border-radius:var(--r);padding:.75rem 1rem;margin-bottom:1rem;font-size:12px;color:var(--t2);line-height:1.8}
 .api-steps a{color:var(--teal);text-decoration:none}
 .api-steps a:hover{text-decoration:underline}
+
+/* Student View Styles */
+.student-view {
+  min-height: 100vh;
+  background: var(--off);
+  display: flex;
+  flex-direction: column;
+}
+.student-header {
+  background: var(--navy);
+  color: white;
+  padding: 1.5rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.student-header h1 {
+  font-family: 'Fraunces', serif;
+  font-size: 1.25rem;
+}
+.student-main {
+  flex: 1;
+  padding: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+}
+.qr-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: var(--rl);
+  border: 1px solid var(--b1);
+  margin-top: 1rem;
+}

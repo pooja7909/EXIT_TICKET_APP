@@ -150,6 +150,7 @@ function AppContent() {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [libFilter, setLibFilter] = useState('all');
   const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' | '' } | null>(null);
+  const [editingTicketId, setEditingTicketId] = useState<string | null>(null);
   
   // AI Gen State
   const [genName, setGenName] = useState('');
@@ -337,15 +338,17 @@ function AppContent() {
     }
   };
 
-  const saveGenerated = async () => {
+  const saveGenerated = async (statusOverride?: TicketStatus) => {
     if (!lastGenerated || !user) return;
     
+    const finalStatus = statusOverride || genStatus;
+
     const ticketData: Omit<Ticket, 'id'> = {
       name: lastGenerated.title || genName,
       subject: lastGenerated.subject || genSubject,
       topic: lastGenerated.topic || genTopic,
       cls: genClass,
-      status: genStatus,
+      status: finalStatus,
       type: (lastGenerated.type as TicketType) || selectedType,
       source: 'generated',
       html: buildTicketPageHTML({ ...lastGenerated, learnerAmbitions: selectedLAs }),
@@ -399,9 +402,11 @@ function AppContent() {
     setManualQs(prev => prev.filter((_, i) => i !== index));
   };
 
-  const saveManual = async () => {
+  const saveManual = async (statusOverride?: TicketStatus) => {
     if (!manualName || !user) { showToast("Please enter a name."); return; }
     if (!manualQs.length) { showToast("Add at least one question."); return; }
+
+    const finalStatus = statusOverride || manualStatus;
 
     const data = {
       title: manualName,
@@ -412,33 +417,42 @@ function AppContent() {
       learnerAmbitions: manualLAs
     };
 
-    const ticketData: Omit<Ticket, 'id'> = {
+    const ticketData: any = {
       name: manualName,
       subject: manualSubject,
       topic: manualTopic,
       cls: manualClass,
-      status: manualStatus,
+      status: finalStatus,
       type: manualType,
       source: 'manual',
       html: buildTicketPageHTML(data),
       learnerAmbitions: manualLAs,
-      color: COLORS[tickets.length % COLORS.length],
-      created: new Date().toISOString(),
-      teacherId: user.uid,
-      teacherEmail: user.email || '',
       questions: manualQs
     };
 
     try {
-      await addDoc(collection(db, 'tickets'), ticketData);
-      showToast("Ticket saved!", "success");
+      if (editingTicketId) {
+        await updateDoc(doc(db, 'tickets', editingTicketId), ticketData);
+        showToast("Ticket updated!", "success");
+      } else {
+        ticketData.color = COLORS[tickets.length % COLORS.length];
+        ticketData.created = new Date().toISOString();
+        ticketData.teacherId = user.uid;
+        ticketData.teacherEmail = user.email || '';
+        await addDoc(collection(db, 'tickets'), ticketData);
+        showToast("Ticket saved!", "success");
+      }
       setCurrentPage('library');
       // Reset
+      setEditingTicketId(null);
       setManualName('');
       setManualQs([]);
       setManualLAs([]);
+      setManualSubject('');
+      setManualTopic('');
+      setManualClass('');
     } catch (e) {
-      handleFirestoreError(e, OperationType.CREATE, 'tickets');
+      handleFirestoreError(e, editingTicketId ? OperationType.UPDATE : OperationType.CREATE, 'tickets');
     }
   };
 
@@ -566,6 +580,20 @@ function AppContent() {
     const blob = new Blob([ticket.html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     window.open(url, '_blank');
+  };
+
+  const editTicket = (ticket: Ticket) => {
+    setEditingTicketId(ticket.id);
+    setManualName(ticket.name);
+    setManualType(ticket.type);
+    setManualSubject(ticket.subject);
+    setManualTopic(ticket.topic);
+    setManualClass(ticket.cls);
+    setManualStatus(ticket.status);
+    setManualLAs(ticket.learnerAmbitions || []);
+    setManualQs(ticket.questions || []);
+    setCurrentPage('build');
+    setManualPreviewHTML('');
   };
 
   const buildTicketPageHTML = (data: any) => {
@@ -758,7 +786,7 @@ function AppContent() {
                   <div className="empty"><div className="empty-icon">📋</div><div className="empty-title">No tickets yet</div><div className="empty-sub">Use AI Generate to create your first exit ticket</div></div>
                 ) : (
                   tickets.slice(0, 5).map(t => (
-                    <TicketItem key={t.id} ticket={t} user={user} onDelete={deleteTicket} onToggleActive={toggleActive} onPreview={previewTicket} onDownload={downloadTicket} />
+                    <TicketItem key={t.id} ticket={t} user={user} onDelete={deleteTicket} onToggleActive={toggleActive} onPreview={previewTicket} onDownload={downloadTicket} onEdit={editTicket} />
                   ))
                 )}
               </div>
@@ -831,7 +859,8 @@ function AppContent() {
                       {lastGenerated && (
                         <>
                           <button className="btn btn-outline btn-sm" onClick={generateTicket}>Regenerate</button>
-                          <button className="btn btn-navy btn-sm" onClick={saveGenerated}>Save to library</button>
+                          <button className="btn btn-navy btn-sm" onClick={() => saveGenerated('active')}>Save to library</button>
+                          <button className="btn btn-outline btn-sm" onClick={() => saveGenerated('draft')}>Save as draft</button>
                         </>
                       )}
                     </div>
@@ -921,8 +950,18 @@ function AppContent() {
                 </div>
                 <div className="divider"></div>
                 <div className="flex gap-2">
-                  <button className="btn btn-navy" onClick={saveManual}>Save to library</button>
+                  <button className="btn btn-navy" onClick={() => saveManual('active')}>Save to library</button>
+                  <button className="btn btn-outline" onClick={() => saveManual('draft')}>Save as draft</button>
                   <button className="btn btn-outline" onClick={previewManual}>Preview</button>
+                  {editingTicketId && (
+                    <button className="btn btn-ghost ml-auto" onClick={() => {
+                      setEditingTicketId(null);
+                      setManualName('');
+                      setManualQs([]);
+                      setManualLAs([]);
+                      setCurrentPage('library');
+                    }}>Cancel Edit</button>
+                  )}
                 </div>
                 {manualPreviewHTML && (
                   <div className="mt-4 p-4 bg-sand rounded-xl border border-dashed border-b2" dangerouslySetInnerHTML={{ __html: manualPreviewHTML }} />
@@ -976,7 +1015,7 @@ function AppContent() {
                   <div className="empty"><div className="empty-icon">📋</div><div className="empty-title">No tickets found</div><div className="empty-sub">Try a different filter</div></div>
                 ) : (
                   filteredTickets.map(t => (
-                    <TicketItem key={t.id} ticket={t} user={user} onDelete={deleteTicket} onToggleActive={toggleActive} onPreview={previewTicket} onDownload={downloadTicket} />
+                    <TicketItem key={t.id} ticket={t} user={user} onDelete={deleteTicket} onToggleActive={toggleActive} onPreview={previewTicket} onDownload={downloadTicket} onEdit={editTicket} />
                   ))
                 )}
               </div>
@@ -1029,7 +1068,7 @@ function AppContent() {
                       </div>
                     ) : (
                       tickets.filter(t => t.status === 'active').map(t => (
-                        <TicketItem key={t.id} ticket={t} user={user} onDelete={deleteTicket} onToggleActive={toggleActive} onPreview={previewTicket} onDownload={downloadTicket} />
+                        <TicketItem key={t.id} ticket={t} user={user} onDelete={deleteTicket} onToggleActive={toggleActive} onPreview={previewTicket} onDownload={downloadTicket} onEdit={editTicket} />
                       ))
                     )}
                   </div>
@@ -1071,10 +1110,11 @@ interface TicketItemProps {
   onToggleActive: (t: Ticket) => Promise<void>;
   onPreview: (t: Ticket) => void;
   onDownload: (t: Ticket) => void;
+  onEdit: (t: Ticket) => void;
 }
 
 function TicketItem(props: any) {
-  const { ticket, user, onDelete, onToggleActive, onPreview, onDownload } = props as TicketItemProps;
+  const { ticket, user, onDelete, onToggleActive, onPreview, onDownload, onEdit } = props as TicketItemProps;
   const isOwner = true; // Everyone can manage all tickets in this shared version
 
   return (
@@ -1102,6 +1142,11 @@ function TicketItem(props: any) {
         {ticket.html && <button className="btn btn-outline btn-sm" onClick={() => onPreview(ticket)}><Eye size={14} /></button>}
         {ticket.html && <button className="btn btn-outline btn-sm" onClick={() => onDownload(ticket)}><Download size={14} /></button>}
         {ticket.url && <a href={ticket.url} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm"><ExternalLink size={14} /></a>}
+        {isOwner && (
+          <button className="btn btn-outline btn-sm" onClick={() => onEdit(ticket)}>
+            Edit
+          </button>
+        )}
         {isOwner && (
           <button className="btn btn-outline btn-sm" onClick={() => onToggleActive(ticket)}>
             {ticket.status === 'active' ? 'Draft' : 'Activate'}

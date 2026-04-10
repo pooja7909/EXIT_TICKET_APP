@@ -147,8 +147,18 @@ const ErrorBoundary: any = class extends Component<any, any> {
 
 function AppContent() {
   const [user, setUser] = useState<User | null>(null);
-  const [isAuthReady, setIsAuthReady] = useState(false);
-  const [isStudentView, setIsStudentView] = useState(false);
+  const [isStudentView, setIsStudentView] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return new URLSearchParams(window.location.search).get('view') === 'student';
+    }
+    return false;
+  });
+  const [isAuthReady, setIsAuthReady] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return new URLSearchParams(window.location.search).get('view') === 'student';
+    }
+    return false;
+  });
   const [studentName, setStudentName] = useState('');
   const [hasEnteredName, setHasEnteredName] = useState(false);
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -211,11 +221,10 @@ function AppContent() {
       setIsAuthReady(true);
     });
 
-    // Check for student view
+    // Check for student view (already handled in initial state, but keeping for safety)
     const params = new URLSearchParams(window.location.search);
     if (params.get('view') === 'student') {
       setIsStudentView(true);
-      // If we are in student view, we don't care about auth ready for the teacher
       setIsAuthReady(true);
     }
 

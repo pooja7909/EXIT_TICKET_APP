@@ -208,6 +208,11 @@ function AppContent() {
 
   // Auth Listener
   useEffect(() => {
+    if (!auth) {
+      console.error("Firebase Auth not initialized.");
+      setIsAuthReady(true);
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       if (u) {
         setUser(u);
@@ -235,7 +240,7 @@ function AppContent() {
 
   // Firestore Listener
   useEffect(() => {
-    if (!isAuthReady) return;
+    if (!isAuthReady || !db) return;
 
     const q = query(collection(db, 'tickets'), orderBy('created', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -251,6 +256,7 @@ function AppContent() {
   // Connection Test
   useEffect(() => {
     async function testConnection() {
+      if (!db) return;
       try {
         await getDocFromServer(doc(db, 'test', 'connection'));
       } catch (error) {
